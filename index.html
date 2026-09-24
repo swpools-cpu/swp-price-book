@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SWP Price Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --ink:#15202b; --muted:#5b6673; --line:#e3e7ec; --accent:#0b5c8a; --accent-ink:#ffffff;
+  --good:#1f7a4d; --good-bg:#e6f4ec; --warn:#8a5a00; --warn-bg:#fdf3dc; --bad:#a3262a; --bad-bg:#fbe7e7; --info-bg:#e7f0f7;
+  --shadow:0 1px 2px rgba(16,24,40,.06),0 4px 16px rgba(16,24,40,.06);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f141a; --panel:#161d25; --ink:#e7edf3; --muted:#9aa6b2; --line:#26313c; --accent:#5aa9d6; --accent-ink:#06121b;
+  --good:#6fd39f; --good-bg:#12291e; --warn:#f0c46a; --warn-bg:#2b230f; --bad:#f08a8d; --bad-bg:#2d1415; --info-bg:#132331;
+  --shadow:0 1px 2px rgba(0,0,0,.4);
+}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 Inter,system-ui,-apple-system,Segoe UI,sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+header{background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.bar{max-width:1280px;margin:0 auto;padding:12px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.brand{font-weight:700;letter-spacing:.2px}.brand small{display:block;font-weight:500;color:var(--muted);font-size:12px}
+.spacer{flex:1}
+.tabs{display:flex;gap:4px}
+.tab{border:0;background:transparent;padding:8px 12px;border-radius:8px;cursor:pointer;color:var(--muted);font-weight:500}
+.tab.on{background:var(--info-bg);color:var(--accent)}
+main{max-width:1280px;margin:0 auto;padding:16px}
+.btn{border:1px solid var(--line);background:var(--panel);padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:500}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn:disabled{opacity:.55;cursor:default}
+.btn.small{padding:4px 8px;font-size:12px}
+input[type=text],input[type=email],input[type=password],input[type=number],select,textarea{
+  border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:8px 10px;width:100%}
+textarea{min-height:70px;resize:vertical}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+.filters{display:grid;grid-template-columns:2fr 1fr;gap:10px;padding:12px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;padding:0 12px 12px}
+.chip{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:4px 10px;cursor:pointer;font-size:12px;color:var(--muted)}
+.chip.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.chip b{font-weight:600;margin-left:4px}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th,td{padding:9px 12px;border-top:1px solid var(--line);text-align:left;vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:600;border-top:0;background:var(--panel);position:sticky;top:0}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.row{cursor:pointer}tr.row:hover td{background:var(--info-bg)}
+.pname{font-weight:600}.pdesc{color:var(--muted);font-size:12px;max-width:520px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.badge{display:inline-block;border-radius:6px;padding:2px 7px;font-size:11px;font-weight:600;white-space:nowrap}
+.b-good{background:var(--good-bg);color:var(--good)}.b-warn{background:var(--warn-bg);color:var(--warn)}.b-bad{background:var(--bad-bg);color:var(--bad)}.b-info{background:var(--info-bg);color:var(--accent)}
+.muted{color:var(--muted)}.small{font-size:12px}
+.drawer{position:fixed;inset:0;background:rgba(10,15,20,.35);display:none;z-index:20}
+.drawer.open{display:block}
+.sheet{position:absolute;right:0;top:0;bottom:0;width:min(640px,100%);background:var(--panel);border-left:1px solid var(--line);overflow:auto;padding:20px}
+.sheet h2{margin:0 0 4px;font-size:18px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.uomrow{border:1px solid var(--line);border-radius:10px;padding:12px;margin:10px 0}
+.uomrow .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+.msg{padding:10px 12px;border-radius:8px;margin:10px 0}
+.msg.err{background:var(--bad-bg);color:var(--bad)}.msg.ok{background:var(--good-bg);color:var(--good)}.msg.info{background:var(--info-bg);color:var(--accent)}
+.login{max-width:380px;margin:60px auto;padding:24px}
+.hist td{font-size:12px}
+.pager{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-top:1px solid var(--line)}
+.hide{display:none!important}
+@media (max-width:720px){
+  .filters{grid-template-columns:1fr}.grid3{grid-template-columns:1fr 1fr}
+  .col-cat,.col-status{display:none}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="brand">Southwest Pools, LLC<small>Price Book</small></div>
+    <nav class="tabs hide" id="tabs">
+      <button class="tab on" data-tab="book">Products</button>
+      <button class="tab" data-tab="changes">Recent changes</button>
+      <button class="tab" data-tab="cats">Categories</button>
+    </nav>
+    <div class="spacer"></div>
+    <span class="small muted" id="who"></span>
+    <button class="btn small hide" id="addBtn">+ Add product</button>
+    <button class="btn small hide" id="acctBtn">Account</button>
+  </div>
+</header>
+
+<main>
+  <!-- login -->
+  <section id="loginView" class="card login hide">
+    <h2 style="margin-top:0">Sign in</h2>
+    <p class="muted small">Staff only. Use your company email.</p>
+    <label for="lemail">Email</label><input id="lemail" type="email" autocomplete="username">
+    <div style="height:10px"></div>
+    <label for="lpass">Password</label><input id="lpass" type="password" autocomplete="current-password">
+    <div id="loginMsg"></div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn primary" id="signin">Sign in</button>
+      <button class="btn" id="signup">Create my login</button>
+    </div>
+    <p class="muted small" style="margin-top:14px">First time? Enter your email and choose a password, then "Create my login". It only works for emails on the staff list.</p>
+  </section>
+
+  <!-- products -->
+  <section id="bookView" class="hide">
+    <div id="syncNote" class="small muted" style="margin:0 2px 10px"></div>
+    <div class="card">
+      <div class="filters">
+        <input id="q" type="text" placeholder="Search name or description (e.g. travertine coping, 400k heater)">
+        <select id="cat"><option value="">All categories</option></select>
+      </div>
+      <div class="chips" id="chips"></div>
+      <div class="tablewrap">
+        <table>
+          <thead><tr>
+            <th>Product</th><th class="col-cat">Category</th><th>UoM</th>
+            <th class="num">Cost</th><th class="num">Markup</th><th class="num">Price</th><th class="col-status">Status</th>
+          </tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <div class="pager"><span class="small muted" id="count"></span><span><button class="btn small" id="more">Show more</button></span></div>
+    </div>
+  </section>
+
+  <!-- recent changes -->
+  <section id="changesView" class="hide">
+    <div class="card tablewrap">
+      <table class="hist">
+        <thead><tr><th>When</th><th>Product</th><th>Who / how</th><th>UoM</th><th class="num">Cost</th><th class="num">Price</th><th>Note</th></tr></thead>
+        <tbody id="changeRows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- categories -->
+  <section id="catsView" class="hide">
+    <p class="small muted">Target markup is a guide. Lines below target are flagged; nothing is repriced automatically. Markup, not margin: 0.42 = 42% markup.</p>
+    <div class="card tablewrap">
+      <table>
+        <thead><tr><th>Category</th><th class="num">Products</th><th class="num">Average markup now</th><th class="num">Target markup</th><th></th><th>Notes</th></tr></thead>
+        <tbody id="catRows"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<!-- product drawer -->
+<div class="drawer" id="drawer"><div class="sheet" id="sheet"></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+const SUPABASE_URL = "https://rfccmwkurbtxthvplkiv.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJmY2Ntd2t1cmJ0eHRodnBsa2l2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMTkyOTYsImV4cCI6MjEwNTc5NTI5Nn0.7KiMHyTfXNuW_cY7WBWsyptl1biDDiqHmT7wNuwU2HU";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const num = (v) => (v === null || v === undefined || v === "" ? null : Number(v));
+const money = (v) => (num(v) === null ? "—" : num(v).toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 }));
+const pct = (v) => (v === null || !isFinite(v) ? "—" : (v * 100).toFixed(1) + "%");
+const markupOf = (c, p) => (num(c) > 0 && num(p) !== null ? num(p) / num(c) - 1 : null);
+const r2 = (n) => Math.round(n * 100) / 100;
+const fmtDate = (d) => (d ? new Date(d).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }) : "—");
+
+let STAFF = null, PRODUCTS = [], CATS = {}, LAST_SYNC = null, SHOW = 100, FILTER = "all";
+
+async function api(action, body = {}) {
+  const { data, error } = await sb.functions.invoke("pricebook", { body: { action, ...body } });
+  if (error) {
+    let msg = error.message;
+    try { const j = await error.context.json(); msg = j.error || msg; } catch (_) {}
+    throw new Error(msg);
+  }
+  if (data && data.error) throw new Error(data.error);
+  return data;
+}
+
+function show(view) {
+  for (const v of ["loginView", "bookView", "changesView", "catsView"]) $(v).classList.toggle("hide", v !== view);
+  document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("on", t.dataset.tab + "View" === view));
+}
+
+// ---------- auth ----------
+async function start() {
+  const { data } = await sb.auth.getSession();
+  if (!data.session) return showLogin();
+  try {
+    const r = await api("whoami");
+    STAFF = r.staff;
+    $("who").textContent = STAFF.name + (STAFF.role === "viewer" ? " (view only)" : "");
+    ["tabs", "acctBtn"].forEach((id) => $(id).classList.remove("hide"));
+    $("addBtn").classList.toggle("hide", STAFF.role === "viewer");
+    show("bookView");
+    await load();
+  } catch (e) {
+    await sb.auth.signOut();
+    showLogin(e.message);
+  }
+}
+function showLogin(msg) {
+  ["tabs", "acctBtn", "addBtn"].forEach((id) => $(id).classList.add("hide"));
+  $("who").textContent = "";
+  show("loginView");
+  $("loginMsg").innerHTML = msg ? `<div class="msg err">${esc(msg)}</div>` : "";
+}
+$("signin").onclick = async () => {
+  $("loginMsg").innerHTML = "";
+  const { error } = await sb.auth.signInWithPassword({ email: $("lemail").value.trim(), password: $("lpass").value });
+  if (error) return ($("loginMsg").innerHTML = `<div class="msg err">${esc(error.message)}</div>`);
+  start();
+};
+$("signup").onclick = async () => {
+  const email = $("lemail").value.trim(), password = $("lpass").value;
+  if (password.length < 10) return ($("loginMsg").innerHTML = `<div class="msg err">Choose a password of at least 10 characters.</div>`);
+  const { error } = await sb.auth.signUp({ email, password });
+  if (error) return ($("loginMsg").innerHTML = `<div class="msg err">${esc(error.message)}</div>`);
+  const r = await sb.auth.signInWithPassword({ email, password });
+  if (r.error) return ($("loginMsg").innerHTML = `<div class="msg info">Login created. If sign-in doesn't work yet, your email isn't on the staff list — ask Corey to add it.</div>`);
+  start();
+};
+$("lpass").addEventListener("keydown", (e) => { if (e.key === "Enter") $("signin").click(); });
+
+$("acctBtn").onclick = () => {
+  openSheet(`
+    <h2>Account</h2><p class="muted small">${esc(STAFF.email)} · ${esc(STAFF.role)}</p>
+    <label>New password (10+ characters)</label><input id="np" type="password" autocomplete="new-password">
+    <div id="pmsg"></div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn primary" id="pset">Change password</button>
+      <button class="btn" id="sout">Sign out</button>
+      <button class="btn" id="closeS">Close</button>
+    </div>`);
+  $("pset").onclick = async () => {
+    const p = $("np").value;
+    if (p.length < 10) return ($("pmsg").innerHTML = `<div class="msg err">At least 10 characters.</div>`);
+    const { error } = await sb.auth.updateUser({ password: p });
+    $("pmsg").innerHTML = error ? `<div class="msg err">${esc(error.message)}</div>` : `<div class="msg ok">Password changed.</div>`;
+  };
+  $("sout").onclick = async () => { await sb.auth.signOut(); closeSheet(); showLogin(); };
+  $("closeS").onclick = closeSheet;
+};
+
+// ---------- data ----------
+async function load() {
+  $("rows").innerHTML = `<tr><td colspan="7" class="muted">Loading…</td></tr>`;
+  const r = await api("list");
+  PRODUCTS = r.products.map((p) => ({ ...p, cost: num(p.cost), price: num(p.price) }));
+  CATS = Object.fromEntries(r.categories.map((c) => [c.code, { target: num(c.target_markup), notes: c.notes }]));
+  LAST_SYNC = r.last_sync;
+  const sel = $("cat"), cur = sel.value;
+  const cats = [...new Set(PRODUCTS.map((p) => p.category || "Other"))].sort();
+  sel.innerHTML = `<option value="">All categories</option>` + cats.map((c) => `<option ${c === cur ? "selected" : ""}>${esc(c)}</option>`).join("");
+  $("syncNote").textContent = `${PRODUCTS.length} products · last JobNimbus check ${fmtDate(LAST_SYNC)}`;
+  render();
+}
+
+function status(p) {
+  const s = [];
+  if (!p.is_active) s.push(["Inactive", "b-bad"]);
+  if (!p.jn_id) s.push(["Not linked", "b-warn"]);
+  if (!p.price) s.push(["Needs price", "b-bad"]);
+  else if (!p.cost) s.push(["No cost", "b-warn"]);
+  const t = CATS[p.category]?.target, m = markupOf(p.cost, p.price);
+  if (t !== null && t !== undefined && m !== null && m < t - 0.005) s.push(["Below target", "b-warn"]);
+  if (p.source === "jobnimbus") s.push(["Added in JN", "b-info"]);
+  if (p.source === "price_book") s.push(["Added here", "b-info"]);
+  if (!s.length) s.push(["OK", "b-good"]);
+  return s;
+}
+const FILTERS = [
+  ["all", "All", () => true],
+  ["linked", "Linked", (p) => !!p.jn_id],
+  ["unlinked", "Not linked", (p) => !p.jn_id],
+  ["noprice", "Needs price", (p) => !p.price],
+  ["nocost", "No cost", (p) => !!p.price && !p.cost],
+  ["below", "Below target", (p) => status(p).some((s) => s[0] === "Below target")],
+  ["new", "Added outside QuickBooks", (p) => p.source !== "quickbooks"],
+  ["inactive", "Inactive", (p) => !p.is_active],
+];
+function filtered() {
+  const q = $("q").value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const cat = $("cat").value;
+  const f = FILTERS.find((x) => x[0] === FILTER)[2];
+  return PRODUCTS.filter((p) => {
+    if (FILTER !== "inactive" && FILTER !== "all" && !p.is_active) return false;
+    if (cat && (p.category || "Other") !== cat) return false;
+    if (!f(p)) return false;
+    if (!q.length) return true;
+    const hay = (p.name + " " + (p.description || "")).toLowerCase();
+    return q.every((w) => hay.includes(w));
+  });
+}
+function render() {
+  const base = PRODUCTS.filter((p) => !$("cat").value || (p.category || "Other") === $("cat").value);
+  $("chips").innerHTML = FILTERS.map(([k, label, f]) =>
+    `<button class="chip ${FILTER === k ? "on" : ""}" data-f="${k}">${label}<b>${base.filter((p) => (k === "inactive" || k === "all" || p.is_active) && f(p)).length}</b></button>`).join("");
+  document.querySelectorAll(".chip").forEach((c) => (c.onclick = () => { FILTER = c.dataset.f; SHOW = 100; render(); }));
+  const list = filtered();
+  $("rows").innerHTML = list.slice(0, SHOW).map((p) => `
+    <tr class="row" data-id="${p.id}">
+      <td><div class="pname">${esc(p.name)}</div><div class="pdesc">${esc((p.description || "").replace(/\s+/g, " "))}</div></td>
+      <td class="col-cat small">${esc(p.category || "")}</td>
+      <td class="small">${esc(p.primary_uom || "—")}${p.uoms && p.uoms.length > 1 ? ` <span class="badge b-info">+${p.uoms.length - 1}</span>` : ""}</td>
+      <td class="num">${money(p.cost)}</td>
+      <td class="num">${pct(markupOf(p.cost, p.price))}</td>
+      <td class="num"><b>${money(p.price)}</b></td>
+      <td class="col-status">${status(p).map(([t, c]) => `<span class="badge ${c}">${t}</span>`).join(" ")}</td>
+    </tr>`).join("") || `<tr><td colspan="7" class="muted">Nothing matches.</td></tr>`;
+  document.querySelectorAll("tr.row").forEach((tr) => (tr.onclick = () => openProduct(Number(tr.dataset.id))));
+  $("count").textContent = `Showing ${Math.min(SHOW, list.length)} of ${list.length}`;
+  $("more").classList.toggle("hide", list.length <= SHOW);
+}
+$("q").addEventListener("input", () => { SHOW = 100; render(); });
+$("cat").addEventListener("change", () => { SHOW = 100; render(); });
+$("more").onclick = () => { SHOW += 200; render(); };
+
+// ---------- drawer ----------
+function openSheet(html) { $("sheet").innerHTML = html; $("drawer").classList.add("open"); }
+function closeSheet() { $("drawer").classList.remove("open"); }
+$("drawer").addEventListener("click", (e) => { if (e.target.id === "drawer") closeSheet(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSheet(); });
+
+function uomLines(p) {
+  // one editable line per unit and part (material / labor)
+  if (p.uoms && p.uoms.length) {
+    const out = [];
+    for (const u of p.uoms) {
+      const parts = ["material", "labor"].filter((part) => u[part]);
+      const used = parts.filter((part) => num(u[part].cost) || num(u[part].price));
+      // hide an empty 0/0 half when the other half carries the price
+      for (const part of used.length ? used : parts.slice(0, 1)) out.push({ uom: u.uom, part, cost: num(u[part].cost), price: num(u[part].price) });
+    }
+    if (out.length) return out;
+  }
+  return [{ uom: p.primary_uom || "EA", part: p.item_type === "labor" ? "labor" : "material", cost: p.cost, price: p.price, fromQB: true }];
+}
+
+async function openProduct(id) {
+  const p = PRODUCTS.find((x) => x.id === id);
+  const canEdit = STAFF.role !== "viewer" && !!p.jn_id;
+  const target = CATS[p.category]?.target;
+  const lines = uomLines(p);
+  openSheet(`
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:start">
+      <div><h2>${esc(p.name)}</h2>
+        <div class="small muted">${esc(p.category || "")}${target != null ? ` · target markup ${pct(target)}` : ""} · ${p.jn_id ? "linked to JobNimbus" : "not linked yet"}</div></div>
+      <button class="btn small" id="closeS">Close</button>
+    </div>
+    ${p.description ? `<p style="white-space:pre-wrap">${esc(p.description)}</p>` : `<p class="muted">No description.</p>`}
+    ${!p.jn_id ? `<div class="msg info">This product hasn't been linked to JobNimbus yet, so its price can't be sent from here. It links automatically the first time it appears on an estimate. Prices shown come from QuickBooks.</div>` : ""}
+    <div id="lines">${lines.map((l, i) => `
+      <div class="uomrow" data-i="${i}">
+        <div class="head"><b>${esc(l.uom)}${l.part === "labor" ? " · labor" : ""}</b>
+          ${target != null && canEdit ? `<button class="btn small" data-target="${i}">Use target ${pct(target)}</button>` : ""}</div>
+        <div class="grid3">
+          <div><label>Cost</label><input type="number" step="0.01" min="0" id="c${i}" value="${l.cost ?? ""}" ${canEdit ? "" : "disabled"}></div>
+          <div><label>Markup %</label><input type="number" step="0.1" id="m${i}" value="${markupOf(l.cost, l.price) === null ? "" : (markupOf(l.cost, l.price) * 100).toFixed(2)}" ${canEdit ? "" : "disabled"}></div>
+          <div><label>Price</label><input type="number" step="0.01" min="0" id="p${i}" value="${l.price ?? ""}" ${canEdit ? "" : "disabled"}></div>
+        </div>
+        ${canEdit ? `<div style="display:flex;gap:8px;align-items:center;margin-top:10px">
+          <input type="text" id="n${i}" placeholder="Note (optional) — e.g. TNT 2026 sheet">
+          <button class="btn primary" data-save="${i}">Save &amp; send</button></div>` : ""}
+        <div id="msg${i}"></div>
+      </div>`).join("")}</div>
+    <h3 style="margin:18px 0 6px;font-size:14px">History</h3>
+    <div id="hist" class="small muted">Loading…</div>`);
+  $("closeS").onclick = closeSheet;
+  lines.forEach((l, i) => {
+    const c = $("c" + i), m = $("m" + i), pr = $("p" + i);
+    if (!c) return;
+    c.oninput = () => { if (m.value !== "" && c.value !== "") pr.value = r2(Number(c.value) * (1 + Number(m.value) / 100)).toFixed(2); };
+    m.oninput = () => { if (c.value !== "" && m.value !== "") pr.value = r2(Number(c.value) * (1 + Number(m.value) / 100)).toFixed(2); };
+    pr.oninput = () => { const mk = markupOf(c.value, pr.value); m.value = mk === null ? "" : (mk * 100).toFixed(2); };
+  });
+  document.querySelectorAll("[data-target]").forEach((b) => (b.onclick = () => {
+    const i = b.dataset.target; $("m" + i).value = (target * 100).toFixed(2); $("m" + i).oninput();
+  }));
+  document.querySelectorAll("[data-save]").forEach((b) => (b.onclick = async () => {
+    const i = Number(b.dataset.save), l = lines[i];
+    const cost = Number($("c" + i).value), price = Number($("p" + i).value);
+    if (!isFinite(cost) || !isFinite(price) || $("c" + i).value === "" || $("p" + i).value === "") return ($("msg" + i).innerHTML = `<div class="msg err">Enter a cost and a price.</div>`);
+    if (!confirm(`Send to JobNimbus?\n\n${p.name}\n${l.uom}${l.part === "labor" ? " (labor)" : ""}: cost ${money(cost)}, price ${money(price)}\n\nQuickBooks updates from JobNimbus automatically.`)) return;
+    b.disabled = true; b.textContent = "Sending…";
+    try {
+      const r = await api("save", { product_id: p.id, uom: l.uom, part: l.part, cost, price, note: $("n" + i).value });
+      const np = r.product;
+      Object.assign(p, { ...np, cost: num(np.cost), price: num(np.price) });
+      $("msg" + i).innerHTML = `<div class="msg ok">Saved and sent to JobNimbus.</div>`;
+      render(); loadHistory(p.id);
+    } catch (e) {
+      $("msg" + i).innerHTML = `<div class="msg err">${esc(e.message)}</div>`;
+    } finally { b.disabled = false; b.textContent = "Save & send"; }
+  }));
+  loadHistory(p.id);
+}
+async function loadHistory(id) {
+  try {
+    const r = await api("history", { product_id: id });
+    $("hist").innerHTML = r.history.length ? `<table class="hist"><tbody>${r.history.map((h) => `
+      <tr><td>${fmtDate(h.changed_at)}</td><td>${esc(whoLabel(h))}</td><td>${esc(h.uom || "")}</td>
+      <td class="num">${money(h.old_cost)} → ${money(h.new_cost)}</td><td class="num">${money(h.old_price)} → ${money(h.new_price)}</td>
+      <td>${esc(h.note || "")}</td></tr>`).join("")}</tbody></table>` : "No changes recorded yet.";
+  } catch (e) { $("hist").textContent = e.message; }
+}
+function whoLabel(h) {
+  return ({ price_book: h.changed_by, jobnimbus_outside: "Changed in JobNimbus", quickbooks_outside: "Changed in QuickBooks", link: "Linked (JobNimbus value)", seed: "Initial load" })[h.source] || h.changed_by;
+}
+
+// ---------- add product ----------
+$("addBtn").onclick = () => {
+  const cats = Object.keys(CATS).sort();
+  openSheet(`
+    <div style="display:flex;justify-content:space-between"><h2>Add product</h2><button class="btn small" id="closeS">Close</button></div>
+    <p class="small muted">Creates the product in JobNimbus. It reaches QuickBooks automatically. Follow the usual naming, e.g. "Plaster - Rope Anchors - 1/26".</p>
+    <label>Name</label><input type="text" id="an">
+    <div style="height:8px"></div>
+    <label>Description (this is the wording customers see on estimates)</label><textarea id="ad"></textarea>
+    <div class="grid3" style="margin-top:8px">
+      <div><label>Category</label><select id="ac"><option value="">From name</option>${cats.map((c) => `<option>${esc(c)}</option>`).join("")}</select></div>
+      <div><label>Unit</label><select id="au">${["EA","LF","SF","SQFT","CY","HR","Items","IA","GAL","QT","BX","BDL","PC","RL","SQ","OZ","PCT"].map((u) => `<option>${u}</option>`).join("")}</select></div>
+      <div><label>Type</label><select id="ap"><option value="material">Material</option><option value="labor">Labor</option></select></div>
+    </div>
+    <div class="grid3" style="margin-top:8px">
+      <div><label>Cost</label><input type="number" step="0.01" id="acst"></div>
+      <div><label>Markup %</label><input type="number" step="0.1" id="amk" value="40"></div>
+      <div><label>Price</label><input type="number" step="0.01" id="apr"></div>
+    </div>
+    <div id="amsg"></div>
+    <div style="margin-top:12px"><button class="btn primary" id="acreate">Create in JobNimbus</button></div>`);
+  $("closeS").onclick = closeSheet;
+  const calc = () => { if ($("acst").value !== "" && $("amk").value !== "") $("apr").value = r2(Number($("acst").value) * (1 + Number($("amk").value) / 100)).toFixed(2); };
+  $("acst").oninput = calc; $("amk").oninput = calc;
+  $("apr").oninput = () => { const m = markupOf($("acst").value, $("apr").value); $("amk").value = m === null ? "" : (m * 100).toFixed(2); };
+  $("ac").onchange = () => { const t = CATS[$("ac").value]?.target; if (t != null) { $("amk").value = (t * 100).toFixed(2); calc(); } };
+  $("acreate").onclick = async () => {
+    const body = { name: $("an").value, description: $("ad").value, category: $("ac").value, uom: $("au").value, part: $("ap").value,
+                   cost: Number($("acst").value), price: Number($("apr").value) };
+    if (!body.name.trim() || $("acst").value === "" || $("apr").value === "") return ($("amsg").innerHTML = `<div class="msg err">Name, cost and price are required.</div>`);
+    if (!confirm(`Create "${body.name}" in JobNimbus at ${money(body.price)} per ${body.uom}?`)) return;
+    $("acreate").disabled = true;
+    try { await api("create", body); closeSheet(); await load(); }
+    catch (e) { $("amsg").innerHTML = `<div class="msg err">${esc(e.message)}</div>`; $("acreate").disabled = false; }
+  };
+};
+
+// ---------- recent changes ----------
+async function loadChanges() {
+  $("changeRows").innerHTML = `<tr><td colspan="7" class="muted">Loading…</td></tr>`;
+  const r = await api("recent");
+  $("changeRows").innerHTML = r.history.map((h) => `
+    <tr><td>${fmtDate(h.changed_at)}</td><td><a href="#" data-p="${h.product_id}">${esc(h.name)}</a></td><td>${esc(whoLabel(h))}</td><td>${esc(h.uom || "")}</td>
+    <td class="num">${money(h.old_cost)} → ${money(h.new_cost)}</td><td class="num">${money(h.old_price)} → ${money(h.new_price)}</td><td>${esc(h.note || "")}</td></tr>`).join("")
+    || `<tr><td colspan="7" class="muted">No changes yet.</td></tr>`;
+  document.querySelectorAll("[data-p]").forEach((a) => (a.onclick = (e) => { e.preventDefault(); openProduct(Number(a.dataset.p)); }));
+}
+
+// ---------- categories ----------
+function renderCats() {
+  const byCat = {};
+  for (const p of PRODUCTS) if (p.is_active) (byCat[p.category || "Other"] ||= []).push(p);
+  const owner = STAFF.role === "owner";
+  $("catRows").innerHTML = Object.keys(byCat).sort().map((c) => {
+    const ms = byCat[c].map((p) => markupOf(p.cost, p.price)).filter((m) => m !== null);
+    const avg = ms.length ? ms.reduce((a, b) => a + b, 0) / ms.length : null;
+    const t = CATS[c]?.target;
+    return `<tr><td><b>${esc(c)}</b></td><td class="num">${byCat[c].length}</td><td class="num">${pct(avg)}</td>
+      <td class="num" style="width:120px">${owner ? `<input type="number" step="0.5" id="t_${esc(c)}" value="${t == null ? "" : (t * 100).toFixed(1)}" placeholder="none">` : pct(t)}</td>
+      <td>${owner ? `<button class="btn small" data-cat="${esc(c)}">Save</button>` : ""}</td><td class="small muted">${esc(CATS[c]?.notes || "")}</td></tr>`;
+  }).join("");
+  document.querySelectorAll("[data-cat]").forEach((b) => (b.onclick = async () => {
+    const c = b.dataset.cat, v = document.getElementById("t_" + c).value;
+    b.disabled = true;
+    try { await api("set_target", { code: c, target_markup: v === "" ? null : Number(v) / 100 }); CATS[c] = { ...(CATS[c] || {}), target: v === "" ? null : Number(v) / 100 }; b.textContent = "Saved"; }
+    catch (e) { alert(e.message); b.disabled = false; }
+  }));
+}
+
+document.querySelectorAll(".tab").forEach((t) => (t.onclick = () => {
+  const v = t.dataset.tab + "View"; show(v);
+  if (v === "changesView") loadChanges();
+  if (v === "catsView") renderCats();
+  if (v === "bookView") render();
+}));
+
+start();
+</script>
+</body>
+</html>
