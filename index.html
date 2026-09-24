@@ -65,6 +65,36 @@ label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
 .hist td{font-size:12px}
 .pager{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-top:1px solid var(--line)}
 .hide{display:none!important}
+/* ballparks */
+.bp-wrap{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(320px,1fr);gap:16px;align-items:start}
+.bp-result{position:sticky;top:76px}
+.bp-head{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:var(--panel);padding:7px 12px;cursor:pointer;font-weight:500;color:var(--muted)}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+.grp{border-top:1px solid var(--line)}
+.grp>summary{list-style:none;cursor:pointer;padding:11px 12px;font-weight:600;display:flex;justify-content:space-between}
+.grp>summary::-webkit-details-marker{display:none}
+.grp>summary:after{content:"+";color:var(--muted)}.grp[open]>summary:after{content:"–"}
+.fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;padding:0 12px 14px}
+.fields .help{font-size:11px;color:var(--muted);margin-top:3px}
+.chk{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--ink);margin-top:22px}
+.big{font-size:30px;font-weight:700;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+.range{font-size:15px;color:var(--muted);font-variant-numeric:tabular-nums}
+.kv{display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}
+.kv:first-child{border-top:0}
+.jobpick{position:relative;flex:1;min-width:220px}
+.jobres{position:absolute;left:0;right:0;top:100%;z-index:6;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);max-height:260px;overflow:auto}
+.jobres div{padding:8px 10px;cursor:pointer;border-top:1px solid var(--line)}.jobres div:first-child{border-top:0}
+.jobres div:hover{background:var(--info-bg)}
+tr.removed td{color:var(--muted);text-decoration:line-through}
+tr.removed td.reason{text-decoration:none;font-style:italic}
+tr.sec td{background:var(--bg);font-weight:600;font-size:12px}
+.linesTbl td{font-size:12px;padding:6px 10px}
+#bpMini{display:none}
+@media (max-width:980px){.bp-wrap{grid-template-columns:1fr}.bp-result{position:static}
+  #bpMini{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:8;background:var(--panel);border-top:1px solid var(--line);padding:10px 16px;justify-content:space-between;align-items:center;box-shadow:0 -4px 16px rgba(0,0,0,.08)}
+  #bpEdit{padding-bottom:64px}}
 @media (max-width:720px){
   .filters{grid-template-columns:1fr}.grid3{grid-template-columns:1fr 1fr}
   .col-cat,.col-status{display:none}
@@ -77,6 +107,7 @@ label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
     <div class="brand">Southwest Pools, LLC<small>Price Book</small></div>
     <nav class="tabs hide" id="tabs">
       <button class="tab on" data-tab="book">Products</button>
+      <button class="tab" data-tab="bp">Ballparks</button>
       <button class="tab" data-tab="changes">Recent changes</button>
       <button class="tab" data-tab="cats">Categories</button>
     </nav>
@@ -122,6 +153,57 @@ label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
         </table>
       </div>
       <div class="pager"><span class="small muted" id="count"></span><span><button class="btn small" id="more">Show more</button></span></div>
+    </div>
+  </section>
+
+  <!-- ballparks -->
+  <section id="bpView" class="hide">
+    <div id="bpList">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div class="small muted">Conceptual prices for new pools, from the assembly library and today's price book.</div>
+        <button class="btn primary" id="bpNew">+ New ballpark</button>
+      </div>
+      <div class="card tablewrap"><table>
+        <thead><tr><th>Job</th><th class="num">Ballpark</th><th class="num">Range</th><th>Updated</th></tr></thead>
+        <tbody id="bpRows"></tbody>
+      </table></div>
+    </div>
+    <div id="bpEdit" class="hide">
+      <div style="margin-bottom:10px"><button class="btn small" id="bpBack">← All ballparks</button></div>
+      <div class="bp-wrap">
+        <div class="card">
+          <div class="bp-head">
+            <div class="jobpick">
+              <input type="text" id="bpJob" placeholder="JobNimbus job — type a name to search" autocomplete="off">
+              <div class="jobres hide" id="bpJobRes"></div>
+            </div>
+          </div>
+          <div class="bp-head" style="padding-top:0">
+            <span class="small muted">Start from</span>
+            <div class="seg" id="bpPresets"></div>
+            <div class="seg" id="bpSpa"><button data-v="0" class="on">Pool</button><button data-v="1">Pool + spa</button></div>
+          </div>
+          <div id="bpFields"></div>
+        </div>
+        <div class="bp-result">
+          <div class="card" style="padding:16px">
+            <div class="small muted">Ballpark</div>
+            <div class="big" id="bpTotal">—</div>
+            <div class="range" id="bpRange"></div>
+            <div style="margin-top:12px" id="bpKv"></div>
+            <div id="bpFlags"></div>
+            <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+              <button class="btn primary" id="bpSave">Save to job</button>
+              <button class="btn" id="bpLinesBtn">Show every line</button>
+            </div>
+            <div id="bpMsg"></div>
+          </div>
+        </div>
+      </div>
+      <div id="bpMini"><div><b id="bpMiniTotal">—</b><div class="small muted" id="bpMiniRange"></div></div><button class="btn small" onclick="document.querySelector('.bp-result').scrollIntoView({behavior:'smooth'})">Details</button></div>
+      <div class="card tablewrap hide" id="bpLines" style="margin-top:16px">
+        <table class="linesTbl"><thead><tr><th>Line</th><th>Product</th><th class="num">Qty</th><th>Unit</th><th class="num">Price</th><th class="num">Amount</th><th>Note</th></tr></thead><tbody id="bpLineRows"></tbody></table>
+      </div>
     </div>
   </section>
 
@@ -179,7 +261,7 @@ async function api(action, body = {}) {
 }
 
 function show(view) {
-  for (const v of ["loginView", "bookView", "changesView", "catsView"]) $(v).classList.toggle("hide", v !== view);
+  for (const v of ["loginView", "bookView", "bpView", "changesView", "catsView"]) $(v).classList.toggle("hide", v !== view);
   document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("on", t.dataset.tab + "View" === view));
 }
 
@@ -481,9 +563,166 @@ function renderCats() {
 document.querySelectorAll(".tab").forEach((t) => (t.onclick = () => {
   const v = t.dataset.tab + "View"; show(v);
   if (v === "changesView") loadChanges();
+  if (v === "bpView") bpShowList();
   if (v === "catsView") renderCats();
   if (v === "bookView") render();
 }));
+
+// ---------- ballparks ----------
+async function bpApi(action, body = {}) {
+  const { data, error } = await sb.functions.invoke("ballpark", { body: { action, ...body } });
+  if (error) { let m = error.message; try { m = (await error.context.json()).error || m; } catch (_) {} throw new Error(m); }
+  if (data && data.error) throw new Error(data.error);
+  return data;
+}
+let BPCFG = null, BP = null, BPRES = null, bpTimer = null, bpSeq = 0;
+const money0 = (v) => (v == null ? "—" : Number(v).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }));
+
+async function bpShowList() {
+  $("bpEdit").classList.add("hide"); $("bpList").classList.remove("hide");
+  $("bpRows").innerHTML = `<tr><td colspan="4" class="muted">Loading…</td></tr>`;
+  try {
+    const r = await bpApi("list");
+    $("bpRows").innerHTML = r.ballparks.map((b) => `<tr class="row" data-id="${b.id}"><td><div class="pname">${esc(b.job_name)}</div><div class="pdesc">${esc([b.job_number ? "#" + b.job_number : "", b.job_address].filter(Boolean).join(" · "))}</div></td>
+      <td class="num"><b>${money0(b.total)}</b></td><td class="num">${money0(b.low)} – ${money0(b.high)}</td><td class="small">${fmtDate(b.updated_at)}<br><span class="muted">${esc(b.updated_by || "")}</span></td></tr>`).join("")
+      || `<tr><td colspan="4" class="muted">No ballparks yet. Start one with “New ballpark”.</td></tr>`;
+    document.querySelectorAll("#bpRows tr.row").forEach((tr) => (tr.onclick = () => bpOpen(Number(tr.dataset.id))));
+  } catch (e) { $("bpRows").innerHTML = `<tr><td colspan="4"><div class="msg err">${esc(e.message)}</div></td></tr>`; }
+}
+async function bpLoadCfg() { if (!BPCFG) BPCFG = await bpApi("config"); return BPCFG; }
+function bpDefaults() { const o = {}; for (const i of BPCFG.inputs) o[i.key] = i.default; return o; }
+
+async function bpNew() {
+  await bpLoadCfg();
+  BP = { id: null, job: null, inputs: { ...bpDefaults(), ...BPCFG.presets.M }, preset: "M" };
+  delete BP.inputs.label;
+  bpRenderEditor();
+}
+async function bpOpen(id) {
+  await bpLoadCfg();
+  const r = await bpApi("get", { id });
+  const b = r.ballpark;
+  BP = { id: b.id, job: { jnid: b.jn_job_id, name: b.job_name, number: b.job_number, address: b.job_address }, inputs: { ...bpDefaults(), ...b.inputs }, preset: null };
+  bpRenderEditor();
+}
+$("bpNew").onclick = bpNew;
+$("bpBack").onclick = bpShowList;
+
+function bpRenderEditor() {
+  $("bpList").classList.add("hide"); $("bpEdit").classList.remove("hide"); $("bpLines").classList.add("hide");
+  $("bpMsg").innerHTML = "";
+  $("bpJob").value = BP.job ? BP.job.name + (BP.job.number ? "  #" + BP.job.number : "") : "";
+  $("bpPresets").innerHTML = Object.entries(BPCFG.presets).map(([k, p]) => `<button data-p="${k}" class="${BP.preset === k ? "on" : ""}">${esc(p.label)}</button>`).join("");
+  document.querySelectorAll("#bpPresets button").forEach((b) => (b.onclick = () => {
+    const p = { ...BPCFG.presets[b.dataset.p] }; delete p.label;
+    Object.assign(BP.inputs, p); BP.preset = b.dataset.p; bpRenderEditor();
+  }));
+  document.querySelectorAll("#bpSpa button").forEach((b) => {
+    b.classList.toggle("on", Number(b.dataset.v) === Number(BP.inputs.spa));
+    b.onclick = () => { BP.inputs.spa = Number(b.dataset.v); bpRenderEditor(); };
+  });
+  const groups = {};
+  for (const i of BPCFG.inputs) { if (i.key === "spa") continue; if (i.show === "spa" && !Number(BP.inputs.spa)) continue; (groups[i.group] ||= []).push(i); }
+  const openByDefault = new Set(["Pool size", "Finishes", "Equipment"]);
+  $("bpFields").innerHTML = Object.entries(groups).map(([g, items]) => `
+    <details class="grp" ${openByDefault.has(g) ? "open" : ""}><summary>${esc(g)}</summary><div class="fields">
+    ${items.map((i) => {
+      const v = BP.inputs[i.key];
+      if (i.type === "bool") return `<label class="chk"><input type="checkbox" data-k="${i.key}" ${Number(v) ? "checked" : ""}> ${esc(i.label)}</label>`;
+      if (i.type === "choice") return `<div><label>${esc(i.label)}</label><select data-k="${i.key}">${Object.entries(i.options).map(([ov, ol]) => `<option value="${esc(ov)}" ${String(v) === ov ? "selected" : ""}>${esc(ol)}</option>`).join("")}</select>${i.help ? `<div class="help">${esc(i.help)}</div>` : ""}</div>`;
+      return `<div><label>${esc(i.label)}${i.unit ? ` (${esc(i.unit)})` : ""}</label><input type="number" step="any" data-k="${i.key}" value="${v ?? ""}">${i.help ? `<div class="help">${esc(i.help)}</div>` : ""}</div>`;
+    }).join("")}</div></details>`).join("");
+  document.querySelectorAll("#bpFields [data-k]").forEach((el) => {
+    const ev = el.tagName === "SELECT" || el.type === "checkbox" ? "change" : "input";
+    el.addEventListener(ev, () => {
+      const k = el.dataset.k;
+      BP.inputs[k] = el.type === "checkbox" ? (el.checked ? 1 : 0) : el.tagName === "SELECT" ? el.value : (el.value === "" ? 0 : Number(el.value));
+      BP.preset = null; document.querySelectorAll("#bpPresets button").forEach((b) => b.classList.remove("on"));
+      bpRecalc();
+    });
+  });
+  bpRecalc(true);
+}
+
+function bpRecalc(now) {
+  clearTimeout(bpTimer);
+  bpTimer = setTimeout(async () => {
+    const seq = ++bpSeq;
+    $("bpTotal").style.opacity = .5;
+    try {
+      const r = await bpApi("calculate", { inputs: BP.inputs });
+      if (seq !== bpSeq) return;
+      BPRES = r; bpRenderResult();
+    } catch (e) { $("bpMsg").innerHTML = `<div class="msg err">${esc(e.message)}</div>`; }
+    finally { $("bpTotal").style.opacity = 1; }
+  }, now ? 0 : 450);
+}
+
+function bpRenderResult() {
+  const r = BPRES;
+  $("bpTotal").textContent = money0(r.total);
+  $("bpRange").textContent = `Range ${money0(r.low)} – ${money0(r.high)}  (−5% / +15%)`;
+  $("bpMiniTotal").textContent = money0(r.total); $("bpMiniRange").textContent = `${money0(r.low)} – ${money0(r.high)}`;
+  $("bpKv").innerHTML = r.sections.filter((s) => s.amount).map((s) => `<div class="kv small"><span>${esc(s.name)}</span><span>${money0(s.amount)}</span></div>`).join("")
+    + (r.discount ? `<div class="kv small"><span>Discount</span><span>−${money0(r.discount)}</span></div>` : "")
+    + `<div class="kv small muted"><span>Cost · markup (internal)</span><span>${money0(r.cost)} · ${r.markup == null ? "—" : (r.markup * 100).toFixed(1) + "%"}</span></div>`;
+  const flags = [];
+  if (r.gaps.length) flags.push(`<div class="msg err small"><b>Not priced (${r.gaps.length}):</b> ${r.gaps.map((g) => esc(g.label + " — " + g.qty + " " + (g.uom || ""))).join("; ")}. These are left out of the total.</div>`);
+  if (r.warnings.length) flags.push(`<div class="msg info small"><b>Check:</b> ${r.warnings.map((w) => esc(w.label + " (" + w.flags.join(", ").toLowerCase() + ")")).join("; ")}</div>`);
+  $("bpFlags").innerHTML = flags.join("");
+  if (!$("bpLines").classList.contains("hide")) bpRenderLines();
+}
+function bpRenderLines() {
+  const r = BPRES; let out = "";
+  r.sections.forEach((s) => {
+    const ls = r.lines.filter((l) => l.section === s.n);
+    out += `<tr class="sec"><td colspan="5">${esc(s.name)}</td><td class="num">${money0(s.amount)}</td><td></td></tr>`;
+    out += ls.map((l) => l.status === "removed"
+      ? `<tr class="removed"><td>${esc(l.label)}</td><td>${esc(l.product || "")}</td><td class="num"></td><td></td><td></td><td></td><td class="reason">${esc(l.reason || "")}</td></tr>`
+      : `<tr><td>${esc(l.label)}${l.flags.length ? ` <span class="badge ${l.flags.includes("NO PRODUCT") || l.flags.includes("NO PRICE") ? "b-bad" : "b-warn"}">${esc(l.flags.join(", ").toLowerCase())}</span>` : ""}</td>
+         <td>${esc(l.product || "—")}</td><td class="num">${l.qty}</td><td>${esc(l.uom || "")}</td><td class="num">${l.unit_price == null ? "—" : money(l.unit_price)}</td><td class="num">${money(l.amount)}</td><td class="small muted">${esc(l.note || l.reason || "")}</td></tr>`).join("");
+  });
+  $("bpLineRows").innerHTML = out;
+}
+$("bpLinesBtn").onclick = () => {
+  const h = $("bpLines").classList.toggle("hide");
+  $("bpLinesBtn").textContent = h ? "Show every line" : "Hide lines";
+  if (!h) { bpRenderLines(); $("bpLines").scrollIntoView({ behavior: "smooth", block: "start" }); }
+};
+
+// job search
+let jobTimer = null;
+$("bpJob").addEventListener("input", () => {
+  BP.job = { name: $("bpJob").value.trim() };  // free text until a job is picked
+  clearTimeout(jobTimer);
+  const q = $("bpJob").value.trim();
+  if (q.length < 2) { $("bpJobRes").classList.add("hide"); return; }
+  jobTimer = setTimeout(async () => {
+    try {
+      const r = await bpApi("jobs", { q });
+      $("bpJobRes").innerHTML = r.jobs.map((j, i) => `<div data-i="${i}"><b>${esc(j.name)}</b> <span class="muted small">#${esc(j.number || "")} · ${esc(j.status || "")}</span><br><span class="small muted">${esc(j.address || "")}</span></div>`).join("")
+        || `<div class="muted small">No JobNimbus job matches — the ballpark will be saved under the name you typed.</div>`;
+      $("bpJobRes").classList.remove("hide");
+      $("bpJobRes").querySelectorAll("[data-i]").forEach((d) => (d.onclick = () => {
+        BP.job = r.jobs[Number(d.dataset.i)];
+        $("bpJob").value = BP.job.name + (BP.job.number ? "  #" + BP.job.number : "");
+        $("bpJobRes").classList.add("hide");
+      }));
+    } catch (e) { $("bpJobRes").innerHTML = `<div class="small">${esc(e.message)}</div>`; $("bpJobRes").classList.remove("hide"); }
+  }, 350);
+});
+document.addEventListener("click", (e) => { if (!e.target.closest(".jobpick")) $("bpJobRes").classList.add("hide"); });
+
+$("bpSave").onclick = async () => {
+  if (!BP.job || !BP.job.name) return ($("bpMsg").innerHTML = `<div class="msg err">Pick the JobNimbus job first.</div>`);
+  $("bpSave").disabled = true;
+  try {
+    const r = await bpApi("save", { id: BP.id, job: BP.job, inputs: BP.inputs });
+    BP.id = r.id; BPRES = r.result; bpRenderResult();
+    $("bpMsg").innerHTML = `<div class="msg ok">Saved${BP.job.jnid ? ` and linked to JobNimbus job #${esc(BP.job.number || "")}` : ` under “${esc(BP.job.name)}” (not linked to a JobNimbus job)`}.</div>`;
+  } catch (e) { $("bpMsg").innerHTML = `<div class="msg err">${esc(e.message)}</div>`; }
+  finally { $("bpSave").disabled = false; }
+};
 
 start();
 </script>
