@@ -131,6 +131,7 @@ tr.sec td{background:var(--bg);font-weight:600;font-size:12px}
       <button class="btn primary" id="signin">Sign in</button>
       <button class="btn" id="signup">Create my login</button>
     </div>
+    <p class="small" style="margin-top:10px"><a href="#" id="forgot">Forgot password?</a></p>
     <p class="muted small" style="margin-top:14px">First time? Enter your email and choose a password, then "Create my login". It only works for emails on the staff list.</p>
   </section>
 
@@ -236,6 +237,8 @@ tr.sec td{background:var(--bg);font-weight:600;font-size:12px}
 <script>
 const SUPABASE_URL = "https://rfccmwkurbtxthvplkiv.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJmY2Ntd2t1cmJ0eHRodnBsa2l2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMTkyOTYsImV4cCI6MjEwNTc5NTI5Nn0.7KiMHyTfXNuW_cY7WBWsyptl1biDDiqHmT7wNuwU2HU";
+// A password-reset email link lands here with type=recovery in the URL; remember it before the client reads the link.
+const RECOVERY = /type=recovery/.test(location.hash + location.search);
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const $ = (id) => document.getElementById(id);
@@ -276,6 +279,11 @@ async function start() {
     ["tabs", "acctBtn"].forEach((id) => $(id).classList.remove("hide"));
     $("addBtn").classList.toggle("hide", STAFF.role === "viewer");
     show("bookView");
+    if (RECOVERY) {
+      history.replaceState(null, "", location.pathname);
+      $("acctBtn").click();
+      $("pmsg").innerHTML = `<div class="msg info">You opened a password reset link. Choose your new password here.</div>`;
+    }
     await load();
   } catch (e) {
     await sb.auth.signOut();
@@ -302,6 +310,14 @@ $("signup").onclick = async () => {
   const r = await sb.auth.signInWithPassword({ email, password });
   if (r.error) return ($("loginMsg").innerHTML = `<div class="msg info">Login created. If sign-in doesn't work yet, your email isn't on the staff list — ask Corey to add it.</div>`);
   start();
+};
+$("forgot").onclick = async (e) => {
+  e.preventDefault();
+  const email = $("lemail").value.trim();
+  if (!email) return ($("loginMsg").innerHTML = `<div class="msg err">Enter your email first, then click Forgot password.</div>`);
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+  $("loginMsg").innerHTML = error ? `<div class="msg err">${esc(error.message)}</div>`
+    : `<div class="msg info">If that email is on the staff list, a reset link is on its way. Open it on this device, then choose a new password.</div>`;
 };
 $("lpass").addEventListener("keydown", (e) => { if (e.key === "Enter") $("signin").click(); });
 
