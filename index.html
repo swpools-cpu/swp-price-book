@@ -50,6 +50,7 @@ tr.row{cursor:pointer}tr.row:hover td{background:var(--info-bg)}
 .pname{font-weight:600}.pdesc{color:var(--muted);font-size:12px;max-width:520px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .badge{display:inline-block;border-radius:6px;padding:2px 7px;font-size:11px;font-weight:600;white-space:nowrap}
 .b-good{background:var(--good-bg);color:var(--good)}.b-warn{background:var(--warn-bg);color:var(--warn)}.b-bad{background:var(--bad-bg);color:var(--bad)}.b-info{background:var(--info-bg);color:var(--accent)}
+.sup{white-space:nowrap}.sup .when{display:block;font-size:11px;color:var(--muted);font-weight:400}
 .muted{color:var(--muted)}.small{font-size:12px}
 .drawer{position:fixed;inset:0;background:rgba(10,15,20,.35);display:none;z-index:20}
 .drawer.open{display:block}
@@ -97,7 +98,7 @@ tr.sec td{background:var(--bg);font-weight:600;font-size:12px}
   #bpEdit{padding-bottom:64px}}
 @media (max-width:720px){
   .filters{grid-template-columns:1fr}.grid3{grid-template-columns:1fr 1fr}
-  .col-cat,.col-status{display:none}
+  .col-cat,.col-status,.col-sup{display:none}
 }
 </style>
 </head>
@@ -107,6 +108,7 @@ tr.sec td{background:var(--bg);font-weight:600;font-size:12px}
     <div class="brand">Southwest Pools, LLC<small>Price Book</small></div>
     <nav class="tabs hide" id="tabs">
       <button class="tab on" data-tab="book">Products</button>
+      <button class="tab" data-tab="supplies">Supplies</button>
       <button class="tab" data-tab="bp">Ballparks</button>
       <button class="tab" data-tab="changes">Recent changes</button>
       <button class="tab" data-tab="cats">Categories</button>
@@ -148,12 +150,30 @@ tr.sec td{background:var(--bg);font-weight:600;font-size:12px}
         <table>
           <thead><tr>
             <th>Product</th><th class="col-cat">Category</th><th>UoM</th>
-            <th class="num">Cost</th><th class="num">Markup</th><th class="num">Price</th><th class="col-status">Status</th>
+            <th class="num">Cost</th><th class="num">Markup</th><th class="num">Price</th><th class="num col-sup">SCP</th><th class="num col-sup">Heritage</th><th class="col-status">Status</th>
           </tr></thead>
           <tbody id="rows"></tbody>
         </table>
       </div>
       <div class="pager"><span class="small muted" id="count"></span><span><button class="btn small" id="more">Show more</button></span></div>
+    </div>
+  </section>
+
+  <!-- supplies -->
+  <section id="suppliesView" class="hide">
+    <div class="small muted" style="margin:0 2px 10px">Supplies we buy but don't sell on estimates. Prices are checked every Monday on Pool360 (SCP, Carrollton) and Heritage Pool+ (Plano). Reference only: nothing here changes a cost or price.</div>
+    <div class="card">
+      <div class="filters">
+        <input id="sq" type="text" placeholder="Search supplies (e.g. reagent, cartridge, SC-1000)">
+        <select id="scat"><option value="">All categories</option></select>
+      </div>
+      <div class="chips" id="schips"></div>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Item</th><th class="col-cat">Category</th><th>Part #</th><th class="num">SCP</th><th class="num">Heritage</th><th>Cheaper at</th><th class="num">Savings</th></tr></thead>
+          <tbody id="supRows"></tbody>
+        </table>
+      </div>
     </div>
   </section>
 
@@ -250,7 +270,7 @@ const markupOf = (c, p) => (num(c) > 0 && num(p) !== null ? num(p) / num(c) - 1 
 const r2 = (n) => Math.round(n * 100) / 100;
 const fmtDate = (d) => (d ? new Date(d).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }) : "—");
 
-let STAFF = null, PRODUCTS = [], CATS = {}, LAST_SYNC = null, SHOW = 100, FILTER = "all";
+let STAFF = null, PRODUCTS = [], CATS = {}, LAST_SYNC = null, SHOW = 100, FILTER = "all", SUPPLIES = [], SFILTER = "all";
 
 async function api(action, body = {}) {
   const { data, error } = await sb.functions.invoke("pricebook", { body: { action, ...body } });
@@ -264,7 +284,7 @@ async function api(action, body = {}) {
 }
 
 function show(view) {
-  for (const v of ["loginView", "bookView", "bpView", "changesView", "catsView"]) $(v).classList.toggle("hide", v !== view);
+  for (const v of ["loginView", "bookView", "suppliesView", "bpView", "changesView", "catsView"]) $(v).classList.toggle("hide", v !== view);
   document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("on", t.dataset.tab + "View" === view));
 }
 
@@ -343,11 +363,12 @@ $("acctBtn").onclick = () => {
 
 // ---------- data ----------
 async function load() {
-  $("rows").innerHTML = `<tr><td colspan="7" class="muted">Loading…</td></tr>`;
+  $("rows").innerHTML = `<tr><td colspan="9" class="muted">Loading…</td></tr>`;
   const r = await api("list");
   PRODUCTS = r.products.map((p) => ({ ...p, cost: num(p.cost), price: num(p.price) }));
   CATS = Object.fromEntries(r.categories.map((c) => [c.code, { target: num(c.target_markup), notes: c.notes }]));
   LAST_SYNC = r.last_sync;
+  SUPPLIES = (r.supplies || []).map((x) => ({ ...x, scp_price: num(x.scp_price), heritage_price: num(x.heritage_price) }));
   const sel = $("cat"), cur = sel.value;
   const cats = [...new Set(PRODUCTS.map((p) => p.category || "Other"))].sort();
   sel.innerHTML = `<option value="">All categories</option>` + cats.map((c) => `<option ${c === cur ? "selected" : ""}>${esc(c)}</option>`).join("");
@@ -368,6 +389,19 @@ function status(p) {
   if (!s.length) s.push(["OK", "b-good"]);
   return s;
 }
+// ---------- SCP vs Heritage ----------
+const shortDate = (d) => (d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "");
+function winner(scp, her) {
+  if (scp === null || her === null || !(scp > 0) || !(her > 0)) return null;
+  if (Math.abs(scp - her) < 0.01) return { who: "Same", save: 0, pct: 0 };
+  return scp < her ? { who: "SCP", save: her - scp, pct: (her - scp) / her } : { who: "Heritage", save: scp - her, pct: (scp - her) / scp };
+}
+function supCell(price, when, isWin) {
+  if (price === null) return `<span class="muted">—</span>`;
+  return `<span class="sup">${isWin ? `<b>${money(price)}</b>` : money(price)}${when ? `<span class="when">${shortDate(when)}</span>` : ""}</span>`;
+}
+function prodWinner(p) { return winner(num(p.pool360_price), num(p.heritage_price)); }
+
 const FILTERS = [
   ["all", "All", () => true],
   ["linked", "Linked", (p) => !!p.jn_id],
@@ -376,6 +410,7 @@ const FILTERS = [
   ["nocost", "No cost", (p) => !!p.price && !p.cost],
   ["below", "Below target", (p) => status(p).some((s) => s[0] === "Below target")],
   ["new", "Added outside QuickBooks", (p) => p.source !== "quickbooks"],
+  ["heritage", "Cheaper at Heritage", (p) => prodWinner(p)?.who === "Heritage"],
   ["inactive", "Inactive", (p) => !p.is_active],
 ];
 function filtered() {
@@ -405,8 +440,10 @@ function render() {
       <td class="num">${money(p.cost)}</td>
       <td class="num">${pct(markupOf(p.cost, p.price))}</td>
       <td class="num"><b>${money(p.price)}</b></td>
+      <td class="num col-sup">${supCell(num(p.pool360_price), p.pool360_checked_at, prodWinner(p)?.who === "SCP")}</td>
+      <td class="num col-sup">${supCell(num(p.heritage_price), p.heritage_checked_at, prodWinner(p)?.who === "Heritage")}${prodWinner(p)?.who === "Heritage" ? ` <span class="badge b-good">${pct(prodWinner(p).pct)} less</span>` : ""}</td>
       <td class="col-status">${status(p).map(([t, c]) => `<span class="badge ${c}">${t}</span>`).join(" ")}</td>
-    </tr>`).join("") || `<tr><td colspan="7" class="muted">Nothing matches.</td></tr>`;
+    </tr>`).join("") || `<tr><td colspan="9" class="muted">Nothing matches.</td></tr>`;
   document.querySelectorAll("tr.row").forEach((tr) => (tr.onclick = () => openProduct(Number(tr.dataset.id))));
   $("count").textContent = `Showing ${Math.min(SHOW, list.length)} of ${list.length}`;
   $("more").classList.toggle("hide", list.length <= SHOW);
@@ -414,6 +451,40 @@ function render() {
 $("q").addEventListener("input", () => { SHOW = 100; render(); });
 $("cat").addEventListener("change", () => { SHOW = 100; render(); });
 $("more").onclick = () => { SHOW += 200; render(); };
+
+const SFILTERS = [
+  ["all", "All", () => true],
+  ["Heritage", "Cheaper at Heritage", (x) => winner(x.scp_price, x.heritage_price)?.who === "Heritage"],
+  ["SCP", "Cheaper at SCP", (x) => winner(x.scp_price, x.heritage_price)?.who === "SCP"],
+  ["Same", "Same price", (x) => winner(x.scp_price, x.heritage_price)?.who === "Same"],
+  ["missing", "Missing a price", (x) => !winner(x.scp_price, x.heritage_price)],
+];
+function renderSupplies() {
+  const sel = $("scat"), cur = sel.value;
+  const cats = [...new Set(SUPPLIES.map((x) => x.category))].sort();
+  sel.innerHTML = `<option value="">All categories</option>` + cats.map((c) => `<option ${c === cur ? "selected" : ""}>${esc(c)}</option>`).join("");
+  const base = SUPPLIES.filter((x) => !sel.value || x.category === sel.value);
+  $("schips").innerHTML = SFILTERS.map(([k, label, f]) => `<button class="chip ${SFILTER === k ? "on" : ""}" data-sf="${k}">${label}<b>${base.filter(f).length}</b></button>`).join("");
+  document.querySelectorAll("[data-sf]").forEach((c) => (c.onclick = () => { SFILTER = c.dataset.sf; renderSupplies(); }));
+  const q = $("sq").value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const f = SFILTERS.find((x) => x[0] === SFILTER)[2];
+  const list = base.filter((x) => f(x) && q.every((w) => (x.name + " " + (x.mfg_part || "") + " " + (x.notes || "")).toLowerCase().includes(w)));
+  $("supRows").innerHTML = list.map((x) => {
+    const w = winner(x.scp_price, x.heritage_price);
+    const tag = !w ? `<span class="badge b-warn">Check</span>` : w.who === "Heritage" ? `<span class="badge b-good">Heritage</span>` : w.who === "SCP" ? `<span class="badge b-info">SCP</span>` : `<span class="badge">Same</span>`;
+    return `<tr>
+      <td><div class="pname">${esc(x.name)}</div>${x.notes ? `<div class="pdesc">${esc(x.notes)}</div>` : ""}</td>
+      <td class="col-cat small">${esc(x.category)}</td>
+      <td class="small">${esc(x.mfg_part || x.scp_product || "—")}</td>
+      <td class="num">${supCell(x.scp_price, x.scp_checked_at, w?.who === "SCP")}</td>
+      <td class="num">${supCell(x.heritage_price, x.heritage_checked_at, w?.who === "Heritage")}${x.heritage_status && x.heritage_status !== "ok" ? `<div class="small muted">${esc(x.heritage_status)}</div>` : ""}</td>
+      <td>${tag}</td>
+      <td class="num">${w && w.save > 0 ? `${money(w.save)}<div class="small muted">${pct(w.pct)}</div>` : "—"}</td>
+    </tr>`;
+  }).join("") || `<tr><td colspan="7" class="muted">Nothing matches.</td></tr>`;
+}
+$("sq").addEventListener("input", renderSupplies);
+$("scat").addEventListener("change", renderSupplies);
 
 // ---------- drawer ----------
 function openSheet(html) { $("sheet").innerHTML = html; $("drawer").classList.add("open"); }
@@ -580,6 +651,7 @@ document.querySelectorAll(".tab").forEach((t) => (t.onclick = () => {
   const v = t.dataset.tab + "View"; show(v);
   if (v === "changesView") loadChanges();
   if (v === "bpView") bpShowList();
+  if (v === "suppliesView") renderSupplies();
   if (v === "catsView") renderCats();
   if (v === "bookView") render();
 }));
